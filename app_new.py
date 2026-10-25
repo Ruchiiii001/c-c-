@@ -517,8 +517,8 @@ with assistant_col:
         placeholder="e.g., Which objects were detected in the video?",
         key="forensic_question"
     )
-     if st.button("Answer", key="forensic_answer"):
-        if not records:
+        if st.button("Answer", key="forensic_answer"):
+          if not records:
             st.info("Analyze evidence first, then ask a question.")
         elif not question.strip():
             st.warning("Type a question first.")
