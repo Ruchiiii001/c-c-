@@ -518,11 +518,11 @@ with assistant_col:
         key="forensic_question"
     )
     if st.button("Answer", key="forensic_answer"):
-          if not records:
+            if not records:
             st.info("Analyze evidence first, then ask a question.")
-        elif not question.strip():
+            elif not question.strip():
             st.warning("Type a question first.")
-        else:
+            else:
             all_findings = []
             for record in records:
                 if record.get("findings"):
