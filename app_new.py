@@ -536,7 +536,19 @@ with assistant_col:
                             f'Video timestamp {detail.get("timestamp")}: '
                             + ", ".join(detail.get("detections", []))
                         )
-
+           all_findings = []
+            for record in records:
+                if record.get("findings"):
+                    all_findings.append(
+                        f'{record["type"]} "{record["filename"]}": '
+                        + "; ".join(record["findings"])
+                    )
+                if record["type"] == "Video":
+                    for detail in record.get("details", []):
+                        all_findings.append(
+                            f'Video timestamp {detail.get("timestamp")}: '
+                            + ", ".join(detail.get("detections", []))
+                        )
             evidence_summary = "\n".join(all_findings) or "No findings recorded."
 
             try:
