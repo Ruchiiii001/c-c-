@@ -584,7 +584,7 @@ with assistant_col:
             else:
                 st.error(f"Groq API error: {response.status_code}")
             except Exception as e:
-            st.error(f"AI Assistant error: {e}")
+                st.error(f"AI Assistant error: {e}")
 
 
 with export_col:
