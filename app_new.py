@@ -517,59 +517,70 @@ with assistant_col:
         placeholder="e.g., Which objects were detected in the video?",
         key="forensic_question"
     )
-   if st.button("Answer", key="forensic_answer"):
-    if not records:
-        st.info("Analyze evidence first, then ask a question.")
-    elif not question.strip():
-        st.warning("Type a question first.")
-    else:
-        all_findings = []
-        for record in records:
-            if record.get("findings"):
-                all_findings.append(
-                    f'{record["type"]} "{record["filename"]}": '
-                    + "; ".join(record["findings"])
-                )
-            if record["type"] == "Video":
-                for detail in record.get("details", []):
+     if st.button("Answer", key="forensic_answer"):
+        if not records:
+            st.info("Analyze evidence first, then ask a question.")
+        elif not question.strip():
+            st.warning("Type a question first.")
+        else:
+            all_findings = []
+            for record in records:
+                if record.get("findings"):
                     all_findings.append(
-                        f'Video timestamp {detail.get("timestamp")}: '
-                        + ", ".join(detail.get("detections", []))
+                        f'{record["type"]} "{record["filename"]}": '
+                        + "; ".join(record["findings"])
                     )
+                if record["type"] == "Video":
+                    for detail in record.get("details", []):
+                        all_findings.append(
+                            f'Video timestamp {detail.get("timestamp")}: '
+                            + ", ".join(detail.get("detections", []))
+                        )
 
-        evidence_summary = "\n".join(all_findings) or "No findings recorded."
-        try:
-            api_key = st.secrets["GROQ_API_KEY"]
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are CrimeVision AI, a forensic assistant. "
-                                "Answer using the supplied evidence. Never invent "
-                                "findings or declare anyone guilty. Explain that "
-                                "results must be verified against original evidence."
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": (
-                                f"Evidence findings:\n{evidence_summary}\n"
-                                f"Question: {question}"
-                            ),
-                        },
-                    ],
-                    "temperature": 0.2,
-                },
-                timeout=30,
-            )
-            if response.ok:
-                answer = response.json()["choices"][0]["message"]["content"]
-                st.info(answer)
+            evidence_summary = "\n".join(all_findings) or "No findings recorded."
+
+            try:
+                api_key = st.secrets["GROQ_API_KEY"]
+                response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    json={
+                        "model": "llama-3.3-70b-versatile",
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are CrimeVision AI, a forensic assistant. "
+                                    "Answer using the supplied evidence. Never invent "
+                                    "findings or declare anyone guilty. Explain that "
+                                    "results must be verified against original evidence."
+                                ),
+                            },
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Evidence findings:\n{evidence_summary}\n"
+                                    f"Question: {question}"
+                                ),
+                            },
+                        ],
+                        "temperature": 0.2,
+                    },
+                    timeout=30,
+                )
+
+                if response.ok:
+                    answer = response.json()["choices"][0]["message"]["content"]
+                    st.info(answer)
+                else:
+                    st.error(f"Groq API error: {response.status_code}")
+
+            except KeyError:
+                st.error("GROQ_API_KEY is missing from Streamlit Secrets.")
+            except requests.RequestException:
+                st.error("Could not connect to Groq. Please try again.")
+            except (ValueError, IndexError):
+                st.error("Could not read Groq's response. Please try again.")
             else:
                 st.error(f"Groq API error: {response.status_code}")
         except Exception as e:
