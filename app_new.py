@@ -536,7 +536,7 @@ with assistant_col:
                             f'Video timestamp {detail.get("timestamp")}: '
                             + ", ".join(detail.get("detections", []))
                         )
-           all_findings = []
+            all_findings = []
             for record in records:
                 if record.get("findings"):
                     all_findings.append(
