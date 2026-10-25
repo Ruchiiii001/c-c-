@@ -4,5 +4,5 @@ opencv-python-headless
 numpy
 Pillow
 faster-whisper
-av<14
+av==13.1.0
 reportlab
