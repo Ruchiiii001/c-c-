@@ -573,8 +573,8 @@ with assistant_col:
                     answer = response.json()["choices"][0]["message"]["content"]
                     st.info(answer)
                 else:
-                    st.error(f"Groq API error: {response.status_code}")
-
+                    st.error(f"Groq API error {response.status_code}: {response.text}")
+                    
             except KeyError:
                 st.error("GROQ_API_KEY is missing from Streamlit Secrets.")
             except requests.RequestException:
