@@ -1,0 +1,8 @@
+streamlit
+ultralytics
+opencv-python-headless
+numpy
+Pillow
+faster-whisper
+av<14
+reportlab
