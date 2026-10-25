@@ -1,5 +1,8 @@
 import streamlit as st
 
+
+
+import requests
 from faster_whisper import WhisperModel
 import os
 import cv2
@@ -515,47 +518,86 @@ with assistant_col:
         key="forensic_question"
     )
     if st.button("Answer", key="forensic_answer"):
-        if not records:
-            st.info("Analyze evidence first, then ask a question.")
-        elif not question.strip():
-            st.warning("Type a question first.")
-        else:
-            all_findings = []
-            for record in records:
-                if record.get("findings"):
-                    all_findings.append(
-                        f'{record["type"]} "{record["filename"]}": '
-                        + "; ".join(record["findings"])
-                    )
-                if record["type"] == "Video":
-                    for detail in record.get("details", []):
-                        all_findings.append(
-                            f'Video timestamp {detail.get("timestamp")}: '
-                            + ", ".join(detail.get("detections", []))
-                        )
-            q = question.lower()
-            if any(word in q for word in ["object", "detect", "video", "frame"]):
-                answer = "\n".join(all_findings) or "No object findings are currently recorded."
-            elif any(word in q for word in ["audio", "speech", "transcript", "said", "spoke"]):
-                audio_lines = [
-                    f'{r["filename"]}: ' + "; ".join(r.get("findings", []))
-                    for r in records if r["type"] == "Audio"
-                ]
-                answer = "\n".join(audio_lines) or "No audio transcript is currently recorded."
-            elif any(word in q for word in ["image", "photo", "picture"]):
-                image_lines = [
-                    f'{r["filename"]}: ' + "; ".join(r.get("findings", []))
-                    for r in records if r["type"] == "Image"
-                ]
-                answer = "\n".join(image_lines) or "No image analysis is currently recorded."
-            else:
-                answer = (
-                    "Here are the current recorded findings:\n"
-                    + ("\n".join(all_findings) if all_findings else "No findings recorded.")
-                    + "\n\nThis is a local, rule-based assistant, not a legal conclusion. "
-                    "Please verify findings against the original evidence."
+    if not records:
+        st.info("Analyze evidence first, then ask a question.")
+    elif not question.strip():
+        st.warning("Type a question first.")
+    else:
+        all_findings = []
+
+        for record in records:
+            if record.get("findings"):
+                all_findings.append(
+                    f'{record["type"]} "{record["filename"]}": '
+                    + "; ".join(record["findings"])
                 )
-            st.info(answer)
+
+            if record["type"] == "Video":
+                for detail in record.get("details", []):
+                    all_findings.append(
+                        f'Video timestamp {detail.get("timestamp")}: '
+                        + ", ".join(detail.get("detections", []))
+                    )
+
+        evidence_summary = "\n".join(all_findings)
+        if not evidence_summary:
+            evidence_summary = "No findings recorded yet."
+
+        try:
+            api_key = st.secrets["GROQ_API_KEY"]
+
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are CrimeVision AI, a forensic evidence "
+                                "analysis assistant. Answer in clear, simple "
+                                "language using the recorded evidence provided. "
+                                "Never invent evidence or claim a person is guilty. "
+                                "Distinguish detected findings from assumptions. "
+                                "Explain that results require verification against "
+                                "the original evidence and are not legal conclusions."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Recorded evidence findings:\n{evidence_summary}\n\n"
+                                f"User's question: {question}"
+                            ),
+                        },
+                    ],
+                    "temperature": 0.2,
+                },
+                timeout=30,
+            )
+
+            if response.ok:
+                result = response.json()
+                answer = result["choices"][0]["message"]["content"]
+                st.info(answer)
+            else:
+                st.error(
+                    f"Groq API error ({response.status_code}): "
+                    "Please check the API key and model availability."
+                )
+
+        except KeyError:
+            st.error("GROQ_API_KEY is missing from Streamlit Secrets.")
+        except requests.RequestException:
+            st.error("Could not connect to Groq. Please try again.")
+        except (ValueError, KeyError, IndexError):
+            st.error("Could not read Groq's response. Please try again.")
+
+
 
 with export_col:
     st.subheader("📄 Export Forensic Report")
