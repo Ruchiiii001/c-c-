@@ -583,7 +583,7 @@ with assistant_col:
                 st.error("Could not read Groq's response. Please try again.")
             else:
                 st.error(f"Groq API error: {response.status_code}")
-        except Exception as e:
+            except Exception as e:
             st.error(f"AI Assistant error: {e}")
 
 
