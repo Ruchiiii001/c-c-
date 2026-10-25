@@ -517,21 +517,19 @@ with assistant_col:
         placeholder="e.g., Which objects were detected in the video?",
         key="forensic_question"
     )
-    if st.button("Answer", key="forensic_answer"):
-        if not records:
+   if st.button("Answer", key="forensic_answer"):
+    if not records:
         st.info("Analyze evidence first, then ask a question.")
     elif not question.strip():
         st.warning("Type a question first.")
     else:
         all_findings = []
-
         for record in records:
             if record.get("findings"):
                 all_findings.append(
                     f'{record["type"]} "{record["filename"]}": '
                     + "; ".join(record["findings"])
                 )
-
             if record["type"] == "Video":
                 for detail in record.get("details", []):
                     all_findings.append(
@@ -539,39 +537,29 @@ with assistant_col:
                         + ", ".join(detail.get("detections", []))
                     )
 
-        evidence_summary = "\n".join(all_findings)
-        if not evidence_summary:
-            evidence_summary = "No findings recorded yet."
-
+        evidence_summary = "\n".join(all_findings) or "No findings recorded."
         try:
             api_key = st.secrets["GROQ_API_KEY"]
-
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {api_key}"},
                 json={
                     "model": "llama-3.3-70b-versatile",
                     "messages": [
                         {
                             "role": "system",
                             "content": (
-                                "You are CrimeVision AI, a forensic evidence "
-                                "analysis assistant. Answer in clear, simple "
-                                "language using the recorded evidence provided. "
-                                "Never invent evidence or claim a person is guilty. "
-                                "Distinguish detected findings from assumptions. "
-                                "Explain that results require verification against "
-                                "the original evidence and are not legal conclusions."
+                                "You are CrimeVision AI, a forensic assistant. "
+                                "Answer using the supplied evidence. Never invent "
+                                "findings or declare anyone guilty. Explain that "
+                                "results must be verified against original evidence."
                             ),
                         },
                         {
                             "role": "user",
                             "content": (
-                                f"Recorded evidence findings:\n{evidence_summary}\n\n"
-                                f"User's question: {question}"
+                                f"Evidence findings:\n{evidence_summary}\n"
+                                f"Question: {question}"
                             ),
                         },
                     ],
@@ -579,24 +567,13 @@ with assistant_col:
                 },
                 timeout=30,
             )
-
             if response.ok:
-                result = response.json()
-                answer = result["choices"][0]["message"]["content"]
+                answer = response.json()["choices"][0]["message"]["content"]
                 st.info(answer)
             else:
-                st.error(
-                    f"Groq API error ({response.status_code}): "
-                    "Please check the API key and model availability."
-                )
-
-        except KeyError:
-            st.error("GROQ_API_KEY is missing from Streamlit Secrets.")
-        except requests.RequestException:
-            st.error("Could not connect to Groq. Please try again.")
-        except (ValueError, KeyError, IndexError):
-            st.error("Could not read Groq's response. Please try again.")
-
+                st.error(f"Groq API error: {response.status_code}")
+        except Exception as e:
+            st.error(f"AI Assistant error: {e}")
 
 
 with export_col:
